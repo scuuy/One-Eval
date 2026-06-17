@@ -42,6 +42,13 @@ uv pip install -e .
 python scripts/doctor.py     # 必需项齐全则退出码 0；缺啥会列出并给修复命令
 ```
 
+> **自动注册为 skill（仓库自带，无需手动操作）**：本仓库根带一个相对软链
+> `.claude/skills/one-eval -> ../../one-eval-skill`，clone 下来即被 Claude Code 当作
+> **项目级 skill** 自动发现——重启 Claude Code 后 `/skills` 列表里会出现 `one-eval`。
+> `doctor.py` 末尾会回显这条注册状态。若软链缺失（极少数情况），按 doctor 提示在仓库根执行
+> `mkdir -p .claude/skills && ln -s ../../one-eval-skill .claude/skills/one-eval` 补建即可。
+> 即使不注册，把 SKILL.md 当普通文档丢给 agent 读、照流程跑同样可用——注册只是让 `/skills` 能自动发现。
+
 **装好之后**：用户**直接用自然语言对话即可**，不需要手敲脚本——你（agent）会按下方流程
 替用户调脚本。例如用户说「用 gpt-4o-mini 评一下 mmlu-redux 和 polymath，API 地址 xxx、
 key xxx」，你就从测连通一路跑到出报告。脚本路径、evalspec 都由你生成与调用。
