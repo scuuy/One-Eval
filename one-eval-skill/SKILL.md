@@ -28,6 +28,15 @@ uv pip install -e .
 ```
 依赖含 `datasets` / `dataflow` 等较重的包；装不全会在首次 `run_eval.py` 时报 import 错。
 
+> **是否需要本地 vLLM？先问清楚再装（省掉笨重依赖）。**
+> 上面的 `pip install -e .` **只装纯 API 评测所需依赖，不含 vllm/torch**——对「只调用外部 API 模型」
+> 的用户已经够用，无需任何额外安装。只有当用户要**在本地用 vLLM 起模型**（`is_api: false`，需 GPU）
+> 时，才另外装重依赖：
+> ```bash
+> pip install -e ".[vllm]"   # 仅本地 vLLM 用户需要；要求匹配的 CUDA，体积大、装得慢
+> ```
+> 所以接入前**务必先问用户走哪条路**（见 step 0），别默认把 vllm 装上去拖慢环境、占满磁盘。
+
 **装完先自检**（确认依赖齐全，避免跑到一半才发现缺包）：
 ```bash
 python scripts/doctor.py     # 必需项齐全则退出码 0；缺啥会列出并给修复命令
@@ -43,10 +52,22 @@ key xxx」，你就从测连通一路跑到出报告。脚本路径、evalspec �
 
 ### 0. 先确认运行环境（环境隔离，别乱动用户环境）
 One-Eval 依赖较重，**必须跑在独立环境里**（专用 conda/venv），不要装进系统自带 python
-或用户全局 site-packages。接入前**主动问用户**：在哪台机器跑（本机 Mac 只验 API；vLLM 去
-GPU 机）、用哪个 Python 环境。拿到后所有脚本一律用**该环境 python 的绝对路径**调用
-（如 `/path/to/.venv/bin/python scripts/xxx.py`），别用裸 `python`，避免误用到别的环境。
-不确定时先跑 `doctor.py`——它会打印当前解释器路径、是否在隔离环境，发现误用系统 base 会告警。
+或用户全局 site-packages。接入前**主动问用户三件事**：
+
+1. **模型从哪来——决定要不要装 vLLM 重依赖（这一步直接影响装多少东西）**：
+   - **只调用外部 API 模型**（OpenAI/DeepSeek 等，`is_api: true`）→ 装基础版 `pip install -e .` 即可，
+     **不要装 vllm/torch**，环境轻、装得快。本机 Mac 走这条路。
+   - **要在本地用 vLLM 起模型**（`is_api: false`，需 GPU）→ 才额外 `pip install -e ".[vllm]"`，
+     且去 GPU 机装。**别默认装 vllm**——纯 API 用户装了纯属浪费磁盘和时间。
+   - 用户不确定时，按「纯 API」起步（最轻），后续真要本地模型再补装 `.[vllm]`。
+2. **用哪个环境管理器、装在哪——别替用户默认决定**：先看用户机器上已有什么
+   （`conda`/`uv`/`python -m venv` 是否可用），再**让用户抉择**用哪个、新建还是复用已有环境、
+   环境建在哪个路径。常见三选一：`conda create -n one-eval`、`uv venv`、`python -m venv .venv`。
+   不要擅自挑一个或往用户已有的业务环境里装。
+3. **在哪台机器跑、对应的 Python 解释器路径**：拿到后所有脚本一律用**该环境 python 的绝对路径**
+   调用（如 `/path/to/.venv/bin/python scripts/xxx.py`），别用裸 `python`，避免误用到别的环境。
+
+不确定环境是否就绪时先跑 `doctor.py`——它会打印当前解释器路径、是否在隔离环境，发现误用系统 base 会告警。
 
 ## 标准流程（按序执行，不要跳步）
 
